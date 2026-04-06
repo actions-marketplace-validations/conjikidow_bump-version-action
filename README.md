@@ -1,7 +1,6 @@
-# Bump Version by Labels
+# Bump Version Action
 
-This GitHub Action automatically bumps the project version based on pull request (PR) labels and creates a PR.
-Once the version bump PR is merged, it automatically creates a new tag and a release (optional) for the bumped version.
+A GitHub Action to bump versions based on pull request (PR) labels.
 
 This action follows the principles of [semantic versioning](https://semver.org),
 incrementing the version number based on the labels applied to the PR.
