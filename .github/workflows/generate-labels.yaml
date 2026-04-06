@@ -12,6 +12,7 @@ on:
     paths:
       - '.github/workflows/generate-labels.yaml'
       - '.github/labels/label-definition.yaml'
+  workflow_dispatch:
 
 jobs:
 
