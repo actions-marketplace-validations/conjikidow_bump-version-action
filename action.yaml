@@ -70,9 +70,7 @@ runs:
           echo "Skipping job because the event is unsupported: ${{ github.event_name }}"
         fi
 
-        {
-          echo "SKIP_JOB=true" >> "$GITHUB_ENV"
-        }
+        echo "SKIP_JOB=true" >> "$GITHUB_ENV"
 
     - name: Checkout repository
       if: env.SKIP_JOB != 'true'
