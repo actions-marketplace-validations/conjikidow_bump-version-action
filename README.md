@@ -223,7 +223,8 @@ Follow these steps to configure the permissions:
 
 2. Determines the bump type
    - For manual workflow dispatches, uses `manual-bump-type`.
-   - Otherwise, extracts PR labels and determines whether a major, minor, or patch bump is required, in accordance with semantic versioning.
+   - Otherwise, extracts PR labels and determines whether a major, minor, or patch bump is required,
+     in accordance with semantic versioning.
    - If no matching labels are found, the process stops.
 
 3. Runs `bump-my-version` to bump the version
