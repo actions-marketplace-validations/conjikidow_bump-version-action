@@ -8,6 +8,7 @@ incrementing the version number based on the labels applied to the PR.
 ## Features
 
 - Automatically determines the version bump type based on PR labels.
+- Supports manual workflow dispatch with an explicitly selected bump type.
 - Uses [bump-my-version](https://github.com/callowayproject/bump-my-version)
   to increment the version according to semantic versioning.
 - Creates a new branch and a PR for the version bump.
@@ -24,7 +25,6 @@ You can save them in a file such as `.github/workflows/bump-version.yaml`.
 Make sure your workflow includes the following:
 
 - The `on: pull_request: types: [closed]` trigger to run the workflow whenever a PR is closed.
-- The condition `if: github.event.pull_request.merged == true` to ensure the workflow only proceeds if the PR was merged.
 - The `permissions:` section to allow the workflow to update repository contents and PRs.
 
 #### Basic Example
@@ -38,7 +38,6 @@ on:
 
 jobs:
   bump-version:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -50,6 +49,46 @@ jobs:
           label-major: 'major update'
           label-minor: 'minor update'
           label-patch: 'patch update'
+          labels-to-add: 'automated,version-bump'
+          create-release: 'true'
+```
+
+#### Example with Manual Dispatch
+
+You can also use this action with manual workflow dispatch.
+The following example adds a manual trigger that lets you choose the bump type when starting the workflow.
+
+```yaml
+name: Bump Version
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Bump Version
+        uses: conjikidow/bump-version-action@v3.0.0
+        with:
+          label-major: 'major update'
+          label-minor: 'minor update'
+          label-patch: 'patch update'
+          manual-bump-type: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.bump_type || '' }}
           labels-to-add: 'automated,version-bump'
           create-release: 'true'
 ```
@@ -69,7 +108,6 @@ on:
 
 jobs:
   bump-version:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -105,6 +143,7 @@ jobs:
 | `label-major`                | The label used to trigger a major version bump.   | No       | `'major'`             |
 | `label-minor`                | The label used to trigger a minor version bump.   | No       | `'minor'`             |
 | `label-patch`                | The label used to trigger a patch version bump.   | No       | `'patch'`             |
+| `manual-bump-type`           | The bump type to use for manual workflow runs.    | No       | `''`                  |
 | `branch-prefix`              | The prefix for the version bump branch name.      | No       | `'workflow'`          |
 | `labels-to-add`              | Comma-separated labels to add to the bump PR.     | No       | `''`                  |
 | `create-release`             | Create a GitHub Release for the new tag.          | No       | `'false'`             |
@@ -112,6 +151,9 @@ jobs:
 <!-- markdownlint-disable MD028 -->
 > [!TIP]
 > Set any of `label-major`, `label-minor`, or `label-patch` to an empty string (`''`) if you want to disable that bump type.
+
+> [!NOTE]
+> Set `manual-bump-type` to one of `major`, `minor`, or `patch` when the workflow is triggered manually.
 
 > [!WARNING]
 > Any labels specified in `labels-to-add` must already exist in your repository.
@@ -175,11 +217,14 @@ Follow these steps to configure the permissions:
 
 ## How It Works
 
-1. Checks if the PR is merged
-   - If not merged, the action skips execution.
+1. Checks the execution conditions
+   - Runs for merged pull requests and manual workflow dispatches.
+   - For other cases, the action skips execution.
 
 2. Determines the bump type
-   - Extracts PR labels and determines whether a major, minor, or patch bump is required, in accordance with semantic versioning.
+   - For manual workflow dispatches, uses `manual-bump-type`.
+   - Otherwise, extracts PR labels and determines whether a major, minor, or patch bump is required,
+     in accordance with semantic versioning.
    - If no matching labels are found, the process stops.
 
 3. Runs `bump-my-version` to bump the version

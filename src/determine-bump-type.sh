@@ -6,6 +6,38 @@ if ! command -v gh &>/dev/null; then
   exit 1
 fi
 
+validate_manual_bump_type() {
+  case "$1" in
+  major | minor | patch | "")
+    return 0
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+}
+
+if ! validate_manual_bump_type "${MANUAL_BUMP_TYPE:-}"; then
+  echo "Error: manual-bump-type must be one of 'major', 'minor', 'patch', or empty." >&2
+  exit 1
+fi
+
+if [[ ${EVENT_NAME} == "workflow_dispatch" ]]; then
+  if [[ -z ${MANUAL_BUMP_TYPE} ]]; then
+    echo "Error: manual-bump-type is required for workflow_dispatch events." >&2
+    exit 1
+  fi
+
+  echo "Using manual bump type: ${MANUAL_BUMP_TYPE}"
+  echo "type=${MANUAL_BUMP_TYPE}" >>"$GITHUB_OUTPUT"
+  exit 0
+fi
+
+if [[ ${EVENT_NAME} != "pull_request" ]]; then
+  echo "Unsupported event for bump type determination: ${EVENT_NAME}" >&2
+  exit 1
+fi
+
 # Fetch PR labels
 echo "Fetching PR labels..."
 labels=$(gh api --jq '.labels.[].name' "/repos/${REPO}/pulls/${PR_NUMBER}" | tr '\n' ',' | sed 's/,$//')
