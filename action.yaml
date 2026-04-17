@@ -23,6 +23,10 @@ inputs:
     description: 'The label used to trigger a patch version bump.'
     required: false
     default: 'patch'
+  manual-bump-type:
+    description: 'The bump type to use for manual workflow dispatch runs.'
+    required: false
+    default: ''
   branch-prefix:
     description: 'The prefix for the version bump branch name.'
     required: false
@@ -46,14 +50,29 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Check if PR is merged
+    - name: Check execution conditions
       shell: bash
       run: |
-        if [[ -z "${{ github.event.pull_request.merged }}" || \
-              "${{ github.event.pull_request.merged }}" != "true" ]]; then
-          echo "Skipping job because the pull request is not merged."
-          echo "SKIP_JOB=true" >> "$GITHUB_ENV"
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "Manual workflow dispatch detected."
+          exit 0
         fi
+
+        if [[ "${{ github.event_name }}" == "pull_request" && \
+              "${{ github.event.pull_request.merged }}" == "true" ]]; then
+          echo "Merged pull request detected."
+          exit 0
+        fi
+
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "Skipping job because the pull request is not merged."
+        else
+          echo "Skipping job because the event is unsupported: ${{ github.event_name }}"
+        fi
+
+        {
+          echo "SKIP_JOB=true" >> "$GITHUB_ENV"
+        }
 
     - name: Checkout repository
       if: env.SKIP_JOB != 'true'
@@ -74,12 +93,14 @@ runs:
       id: bump-type
       shell: bash
       env:
+        EVENT_NAME: ${{ github.event_name }}
         GH_TOKEN: ${{ inputs.github-token }}
         REPO: ${{ github.repository }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         LABEL_MAJOR: ${{ inputs.label-major }}
         LABEL_MINOR: ${{ inputs.label-minor }}
         LABEL_PATCH: ${{ inputs.label-patch }}
+        MANUAL_BUMP_TYPE: ${{ inputs.manual-bump-type }}
       run: ${{ github.action_path }}/src/determine-bump-type.sh
 
     - name: Install uv
